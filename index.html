@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Study Pomodoro Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- PWA basics -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#050816" />
+  <link rel="icon" sizes="192x192" href="icon-192.png" />
+  <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
+
+  <style>
+    :root {
+      --bg: #050816;
+      --card: #0b1020;
+      --card-soft: #151a2c;
+      --accent: #24d26b;
+      --accent-soft: rgba(36, 210, 107, 0.2);
+      --accent-red: #ff4b5c;
+      --text: #f7f9ff;
+      --muted: #a3adcc;
+      --border: #242a3f;
+      --shadow-soft: 0 18px 40px rgba(0,0,0,0.6);
+      --radius-lg: 18px;
+      --radius-pill: 999px;
+      --transition-fast: 0.15s ease-out;
+      --font-main: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background: radial-gradient(circle at top, #151a3b 0, #050816 50%, #020309 100%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 18px;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 1120px;
+      margin: auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .title-block h1 {
+      font-size: 26px;
+      letter-spacing: 0.04em;
+    }
+
+    .title-block p {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .icon-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .icon-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(15, 22, 43, 0.9);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: var(--transition-fast);
+      font-size: 17px;
+    }
+
+    .icon-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+      border-color: var(--accent-soft);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .card {
+      background: radial-gradient(circle at top left, rgba(50,90,255,0.2), transparent 60%),
+                  radial-gradient(circle at bottom right, rgba(50,255,150,0.08), transparent 55%),
+                  #050816;
+      border-radius: 24px;
+      border: 1px solid var(--border);
+      padding: 20px 22px;
+      box-shadow: var(--shadow-soft);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top, rgba(255,255,255,0.06), transparent 55%);
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    .card-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .card-header h2 {
+      font-size: 14px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .pill {
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    /* Timer block */
+    .timer-main {
+      text-align: center;
+      margin-top: 10px;
+      margin-bottom: 12px;
+    }
+
+    .timer-mode-row {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .mode-pill {
+      padding: 3px 14px;
+      border-radius: 999px;
+      font-size: 11px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      color: var(--muted);
+      background: rgba(10,16,34,0.9);
+    }
+
+    .mode-pill.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .timer-display {
+      font-size: 56px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      margin-bottom: 8px;
+    }
+
+    .timer-summary {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .timer-summary b {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .selection-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .field-label {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 3px;
+      text-align: left;
+    }
+
+    select, input[type="number"], input[type="date"] {
+      width: 100%;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      padding: 7px 12px;
+      background: rgba(5,10,27,0.95);
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      transition: var(--transition-fast);
+    }
+
+    select:focus, input[type="number"]:focus, input[type="date"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent-soft);
+    }
+
+    .durations-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 10px;
+      margin-top: 6px;
+      margin-bottom: 10px;
+    }
+
+    .btn-row {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 4px;
+      margin-bottom: 6px;
+    }
+
+    .btn {
+      min-width: 100px;
+      padding: 8px 18px;
+      border-radius: var(--radius-pill);
+      border: none;
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: var(--transition-fast);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #061016;
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+      box-shadow: 0 12px 30px rgba(36,210,107,0.35);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .helper-text {
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    /* Bottom buttons */
+    .bottom-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .bottom-btn {
+      padding: 6px 18px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(10,16,34,0.95);
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition-fast);
+    }
+
+    .bottom-btn:hover {
+      border-color: var(--accent-soft);
+      color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    /* Quick stats */
+    .stats-card {
+      margin-top: 14px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: rgba(8,12,25,0.9);
+      border: 1px solid var(--border);
+    }
+
+    .stats-card h3 {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      margin-bottom: 6px;
+      color: var(--muted);
+    }
+
+    .stats-rows {
+      margin-top: 4px;
+    }
+
+    .stats-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--muted);
+      margin: 2px 0;
+    }
+
+    .stats-label {
+      width: 60px;
+    }
+
+    .stats-bar {
+      flex: 1;
+      height: 6px;
+      border-radius: 999px;
+      background: #161b2f;
+      margin: 0 8px;
+      overflow: hidden;
+    }
+
+    .stats-bar-inner {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #24d26b, #33b1ff);
+    }
+
+    /* History / weekly targets */
+    .history-panel {
+      display: none;
+      margin-top: 12px;
+    }
+
+    .history-panel.visible {
+      display: block;
+    }
+
+    .history-list {
+      max-height: 260px;
+      overflow: auto;
+      padding-right: 4px;
+      font-size: 12px;
+    }
+
+    .history-item {
+      padding: 6px 6px;
+      border-radius: 10px;
+      background: rgba(5,9,24,0.9);
+      border: 1px solid rgba(55,65,99,0.7);
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .history-main {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .history-tag {
+      font-size: 11px;
+      margin-bottom: 2px;
+    }
+
+    .history-meta {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .history-min {
+      font-weight: 600;
+      color: var(--accent);
+      font-size: 13px;
+      margin-left: 8px;
+      white-space: nowrap;
+    }
+
+    /* Weekly targets panel (right side) */
+    .targets-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .targets-header-row small {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .targets-list {
+      margin-top: 6px;
+      max-height: 360px;
+      overflow-y: auto;
+      padding-right: 4px;
+      font-size: 12px;
+    }
+
+    .target-row {
+      margin-bottom: 6px;
+    }
+
+    .target-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2px;
+    }
+
+    .target-title span {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .target-bar {
+      height: 6px;
+      border-radius: 999px;
+      background: #151a2b;
+      overflow: hidden;
+    }
+
+    .target-bar-inner {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #24d26b, #33b1ff);
+      width: 0%;
+    }
+
+    .target-meta {
+      font-size: 10px;
+      color: var(--muted);
+      text-align: right;
+      margin-top: 1px;
+    }
+
+    /* Settings panel (right side expandable) */
+    .settings-panel {
+      margin-top: 14px;
+      padding-top: 10px;
+      border-top: 1px dashed rgba(70,80,120,0.9);
+      display: none;
+    }
+
+    .settings-panel.visible {
+      display: block;
+    }
+
+    .settings-section-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .settings-group-block {
+      margin-bottom: 8px;
+      padding: 6px 8px;
+      border-radius: 12px;
+      background: rgba(10,15,30,0.9);
+    }
+
+    .settings-group-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+      font-size: 12px;
+    }
+
+    .settings-sub-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      margin-top: 2px;
+    }
+
+    .settings-sub-row input[type="color"] {
+      width: 20px;
+      height: 16px;
+      border-radius: 4px;
+      border: none;
+      padding: 0;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .settings-sub-row input[type="number"] {
+      width: 70px;
+      font-size: 11px;
+    }
+
+    .badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .link-small {
+      font-size: 11px;
+      text-decoration: underline;
+      cursor: pointer;
+      color: var(--muted);
+    }
+
+    .link-small:hover {
+      color: var(--accent);
+    }
+
+    /* Small helpers */
+    .text-right { text-align: right; }
+    .mt-6 { margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header>
+      <div class="title-block">
+        <h1>Study Pomodoro Tracker</h1>
+        <p>Fully offline • Local history • Optional Google Sheets backup</p>
+      </div>
+
+      <div class="icon-row">
+        <!-- Theme icon (future use) -->
+        <button class="icon-btn" title="Theme">
+          🌙
+        </button>
+        <!-- Settings -->
+        <button class="icon-btn" id="btnToggleSettings" title="Show/Hide Settings">
+          ⚙️
+        </button>
+        <!-- Stats -->
+        <button class="icon-btn" id="btnToggleStats" title="Show/Hide Stats">
+          📊
+        </button>
+        <!-- History -->
+        <button class="icon-btn" id="btnToggleHistory" title="Show/Hide History">
+          📜
+        </button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <!-- LEFT: Timer + quick stats -->
+      <section class="card">
+        <div class="card-inner">
+          <div class="card-header">
+            <h2>TIMER</h2>
+            <div class="pill" id="timerGroupSummary">No group selected</div>
+          </div>
+
+          <div class="timer-main">
+            <div class="timer-mode-row">
+              <button class="mode-pill active" data-mode="focus" id="modeFocus">FOCUS</button>
+              <button class="mode-pill" data-mode="break" id="modeBreak">BREAK</button>
+            </div>
+
+            <div class="timer-display" id="timerDisplay">25:00</div>
+
+            <div class="timer-summary" id="timerSummary">
+              Today: 0 min • This week: 0 min
+            </div>
+          </div>
+
+          <div class="selection-row">
+            <div>
+              <div class="field-label">Group</div>
+              <select id="groupSelect">
+                <option value="">Select group...</option>
+              </select>
+            </div>
+            <div>
+              <div class="field-label">Sub-group</div>
+              <select id="subGroupSelect">
+                <option value="">Select group first</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="durations-row">
+            <div>
+              <div class="field-label">Focus duration (min)</div>
+              <input type="number" id="focusMinutesInput" value="25" min="1" max="180" />
+            </div>
+            <div>
+              <div class="field-label">Break duration (min)</div>
+              <input type="number" id="breakMinutesInput" value="5" min="1" max="60" />
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btnStart">Start</button>
+            <button class="btn btn-ghost" id="btnReset">Reset</button>
+          </div>
+
+          <div class="helper-text">
+            Focus sessions are logged. Breaks are not logged; they just help you rest.
+          </div>
+
+          <!-- Quick stats & toggles -->
+          <div class="bottom-buttons">
+            <button class="bottom-btn" id="btnShowStats">
+              📊 <span>Show Stats</span>
+            </button>
+            <button class="bottom-btn" id="btnShowHistory">
+              📜 <span>Show History</span>
+            </button>
+          </div>
+
+          <div class="stats-card" id="quickStatsCard">
+            <h3>Quick Stats (Last 7 Days)</h3>
+            <div class="stats-rows" id="quickStatsBody">
+              <div class="helper-text" style="text-align:left; margin-top:4px;">
+                No data yet. Complete a pomodoro to see stats.
+              </div>
+            </div>
+          </div>
+
+          <!-- Hidden history panel below timer on left -->
+          <div class="history-panel" id="historyPanelLeft">
+            <div class="card-header" style="margin-top:8px;">
+              <h2>HISTORY</h2>
+              <div class="pill">
+                <span id="historyRangeLabel">Today</span>
+              </div>
+            </div>
+
+            <div class="selection-row" style="margin-top:4px;">
+              <div>
+                <div class="field-label">Group filter</div>
+                <select id="historyGroupFilter">
+                  <option value="">All groups</option>
+                </select>
+              </div>
+              <div>
+                <div class="field-label">Sub-group filter</div>
+                <select id="historySubGroupFilter">
+                  <option value="">All sub-groups</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="selection-row" style="margin-top:4px;">
+              <div>
+                <div class="field-label">From date</div>
+                <input type="date" id="historyFrom" />
+              </div>
+              <div>
+                <div class="field-label">To date</div>
+                <input type="date" id="historyTo" />
+              </div>
+            </div>
+
+            <div class="stats-card" style="margin-top:10px;">
+              <h3>Sessions</h3>
+              <div class="history-list" id="historyList"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT: Weekly targets + settings -->
+      <section class="card">
+        <div class="card-inner">
+          <div class="card-header">
+            <h2>WEEKLY TARGETS</h2>
+            <div class="pill" id="weekRangeLabel"></div>
+          </div>
+
+          <div class="targets-header-row">
+            <small>Set weekly minutes for each sub-group in Settings.</small>
+            <span class="link-small" id="btnThisWeek">Jump to this week</span>
+          </div>
+
+          <div class="targets-list" id="targetsList">
+            <div class="helper-text" style="text-align:left;">
+              No weekly targets set. Open Settings and add minutes for your sub-groups.
+            </div>
+          </div>
+
+          <!-- Settings (toggle by icon) -->
+          <div class="settings-panel" id="settingsPanel">
+            <div class="settings-section-title">Settings</div>
+            <p class="helper-text" style="text-align:left;margin-bottom:6px;">
+              Change colours & weekly targets. Targets are in minutes per week.
+            </p>
+            <div id="settingsGroups"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    /*******************************************************
+     * CONFIG
+     ******************************************************/
+    // 🔑 PASTE YOUR GOOGLE SCRIPT WEB APP URL HERE:
+    const CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbwkZFU3rtN3f8r0r5AzAzcAXHpm2iU1Gm3HwIYg8o-FY4ioC7SoN4q1warupIZ7KLp7Pw/exec";
+
+    const STORAGE_KEYS = {
+      sessions: "study_sessions_v2",
+      colors: "study_colors_v2",
+      targets: "study_targets_v2"
+    };
+
+    const GROUPS = [
+      {
+        id: "hindi",
+        name: "Hindi",
+        color: "#f5a623",
+        subGroups: [
+          { id: "hindi_vocab", name: "Vocab" },
+          { id: "hindi_rules", name: "Rules" }
+        ]
+      },
+      {
+        id: "english",
+        name: "English",
+        color: "#2eccff",
+        subGroups: [
+          { id: "english_vocab", name: "Vocab" },
+          { id: "english_rules", name: "Rules" },
+          { id: "english_reading", name: "Reading" }
+        ]
+      },
+      {
+        id: "reasoning",
+        name: "Reasoning",
+        color: "#24d26b",
+        subGroups: [
+          { id: "reasoning_general", name: "General" }
+        ]
+      },
+      {
+        id: "gs",
+        name: "GS",
+        color: "#ff6f61",
+        subGroups: [
+          { id: "gs_history", name: "History" },
+          { id: "gs_geo", name: "Geography" },
+          { id: "gs_eco", name: "Eco" },
+          { id: "gs_static", name: "Static" },
+          { id: "gs_polity", name: "Polity" },
+          { id: "gs_ca", name: "Current affairs" }
+        ]
+      },
+      {
+        id: "teaching",
+        name: "Teaching Aptitude",
+        color: "#9b59b6",
+        subGroups: [
+          { id: "teaching_general", name: "General" }
+        ]
+      },
+      {
+        id: "maths",
+        name: "Maths",
+        color: "#3498db",
+        subGroups: [
+          { id: "maths_arith", name: "Arithmetic" },
+          { id: "maths_advance", name: "Advance" },
+          { id: "maths_teaching", name: "Teaching" }
+        ]
+      },
+      {
+        id: "science",
+        name: "Science",
+        color: "#1abc9c",
+        subGroups: [
+          { id: "science_general", name: "General" }
+        ]
+      },
+      {
+        id: "haryana_gk",
+        name: "Haryana GK",
+        color: "#f39c12",
+        subGroups: [
+          { id: "haryana_gk_general", name: "General" }
+        ]
+      },
+      {
+        id: "computer",
+        name: "Computer",
+        color: "#e67e22",
+        subGroups: [
+          { id: "computer_general", name: "General" }
+        ]
+      }
+    ];
+
+    /*******************************************************
+     * STATE
+     ******************************************************/
+    let sessions = [];
+    let colorSettings = {};
+    let weeklyTargets = {}; // subGroupId -> minutes
+    let timerInterval = null;
+    let timerMode = "focus"; // "focus" | "break"
+    let remainingSeconds = 25 * 60;
+
+    /*******************************************************
+     * HELPERS
+     ******************************************************/
+    function loadFromStorage() {
+      try {
+        const s = localStorage.getItem(STORAGE_KEYS.sessions);
+        const c = localStorage.getItem(STORAGE_KEYS.colors);
+        const t = localStorage.getItem(STORAGE_KEYS.targets);
+        sessions = s ? JSON.parse(s) : [];
+        colorSettings = c ? JSON.parse(c) : {};
+        weeklyTargets = t ? JSON.parse(t) : {};
+      } catch (err) {
+        console.error("Failed to load local data", err);
+        sessions = [];
+        colorSettings = {};
+        weeklyTargets = {};
+      }
+    }
+
+    function saveSessions() {
+      localStorage.setItem(STORAGE_KEYS.sessions, JSON.stringify(sessions));
+    }
+    function saveColors() {
+      localStorage.setItem(STORAGE_KEYS.colors, JSON.stringify(colorSettings));
+    }
+    function saveTargets() {
+      localStorage.setItem(STORAGE_KEYS.targets, JSON.stringify(weeklyTargets));
+    }
+
+    function formatMinutes(m) {
+      return `${m} min`;
+    }
+
+    function formatTime(seconds) {
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      return `${m.toString().padStart(2, "0")}:${s
+        .toString()
+        .padStart(2, "0")}`;
+    }
+
+    function startOfDay(d) {
+      const x = new Date(d);
+      x.setHours(0,0,0,0);
+      return x;
+    }
+
+    function getWeekNumber(date) {
+      const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      const dayNum = d.getUTCDay() || 7;
+      d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+      return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+    }
+
+    function getCurrentWeekRangeLabel() {
+      const now = new Date();
+      const d = now.getDay(); // 0-6
+      const diffToMon = (d === 0 ? -6 : 1) - d;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() + diffToMon);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      const fmt = d => `${d.getDate().toString().padStart(2, "0")}-${(d.getMonth()+1)
+        .toString()
+        .padStart(2,"0")}-${d.getFullYear()}`;
+      return `${fmt(monday)} → ${fmt(sunday)}`;
+    }
+
+    function getGroupById(id) {
+      return GROUPS.find(g => g.id === id);
+    }
+    function getSubGroupById(id) {
+      for (const g of GROUPS) {
+        const s = g.subGroups.find(sg => sg.id === id);
+        if (s) return s;
+      }
+      return null;
+    }
+
+    /*******************************************************
+     * CLOUD SYNC (Google Sheets)
+     ******************************************************/
+    async function syncSessionToCloud(session) {
+      if (!CLOUD_SYNC_URL || CLOUD_SYNC_URL === "PASTE_YOUR_GOOGLE_SCRIPT_URL_HERE") {
+        // user hasn't configured yet; just skip
+        return;
+      }
+      try {
+        const when = session.completedAt ? new Date(session.completedAt) : new Date();
+        const payload = {
+          group: getGroupById(session.groupId)?.name || "",
+          subGroup: getSubGroupById(session.subGroupId)?.name || "",
+          minutes: session.minutes || 0,
+          weekNumber: getWeekNumber(when)
+        };
+
+        await fetch(CLOUD_SYNC_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        console.log("Cloud sync OK:", payload);
+      } catch (err) {
+        console.error("Cloud sync failed:", err);
+      }
+    }
+
+    /*******************************************************
+     * UI BINDING
+     ******************************************************/
+    const els = {};
+
+    function grabElements() {
+      els.groupSelect = document.getElementById("groupSelect");
+      els.subGroupSelect = document.getElementById("subGroupSelect");
+      els.timerDisplay = document.getElementById("timerDisplay");
+      els.timerSummary = document.getElementById("timerSummary");
+      els.focusMinutesInput = document.getElementById("focusMinutesInput");
+      els.breakMinutesInput = document.getElementById("breakMinutesInput");
+      els.btnStart = document.getElementById("btnStart");
+      els.btnReset = document.getElementById("btnReset");
+      els.modeFocus = document.getElementById("modeFocus");
+      els.modeBreak = document.getElementById("modeBreak");
+      els.timerGroupSummary = document.getElementById("timerGroupSummary");
+      els.quickStatsBody = document.getElementById("quickStatsBody");
+      els.weekRangeLabel = document.getElementById("weekRangeLabel");
+      els.targetsList = document.getElementById("targetsList");
+      els.settingsPanel = document.getElementById("settingsPanel");
+      els.settingsGroups = document.getElementById("settingsGroups");
+      els.btnToggleSettings = document.getElementById("btnToggleSettings");
+      els.btnToggleStats = document.getElementById("btnToggleStats");
+      els.btnToggleHistory = document.getElementById("btnToggleHistory");
+      els.btnShowStats = document.getElementById("btnShowStats");
+      els.btnShowHistory = document.getElementById("btnShowHistory");
+      els.quickStatsCard = document.getElementById("quickStatsCard");
+      els.historyPanelLeft = document.getElementById("historyPanelLeft");
+      els.historyList = document.getElementById("historyList");
+      els.historyGroupFilter = document.getElementById("historyGroupFilter");
+      els.historySubGroupFilter = document.getElementById("historySubGroupFilter");
+      els.historyFrom = document.getElementById("historyFrom");
+      els.historyTo = document.getElementById("historyTo");
+      els.historyRangeLabel = document.getElementById("historyRangeLabel");
+      els.btnThisWeek = document.getElementById("btnThisWeek");
+    }
+
+    function initSelects() {
+      // Group select
+      for (const g of GROUPS) {
+        const opt = document.createElement("option");
+        opt.value = g.id;
+        opt.textContent = g.name;
+        els.groupSelect.appendChild(opt);
+
+        const opt2 = document.createElement("option");
+        opt2.value = g.id;
+        opt2.textContent = g.name;
+        els.historyGroupFilter.appendChild(opt2);
+      }
+
+      els.groupSelect.addEventListener("change", () => {
+        populateSubGroups();
+        updateTimerSummary();
+      });
+
+      els.historyGroupFilter.addEventListener("change", () => {
+        populateHistorySubGroupsFilter();
+        renderHistory();
+      });
+
+      els.historySubGroupFilter.addEventListener("change", renderHistory);
+      els.historyFrom.addEventListener("change", renderHistory);
+      els.historyTo.addEventListener("change", renderHistory);
+    }
+
+    function populateSubGroups() {
+      const groupId = els.groupSelect.value;
+      els.subGroupSelect.innerHTML = "";
+      if (!groupId) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "Select group first";
+        els.subGroupSelect.appendChild(opt);
+        return;
+      }
+      const g = getGroupById(groupId);
+      for (const sg of g.subGroups) {
+        const opt = document.createElement("option");
+        opt.value = sg.id;
+        opt.textContent = sg.name;
+        els.subGroupSelect.appendChild(opt);
+      }
+    }
+
+    function populateHistorySubGroupsFilter() {
+      const groupId = els.historyGroupFilter.value;
+      els.historySubGroupFilter.innerHTML = "";
+      const allOpt = document.createElement("option");
+      allOpt.value = "";
+      allOpt.textContent = "All sub-groups";
+      els.historySubGroupFilter.appendChild(allOpt);
+
+      if (!groupId) return;
+      const g = getGroupById(groupId);
+      for (const sg of g.subGroups) {
+        const opt = document.createElement("option");
+        opt.value = sg.id;
+        opt.textContent = sg.name;
+        els.historySubGroupFilter.appendChild(opt);
+      }
+    }
+
+    function updateTimerSummary() {
+      const today = startOfDay(new Date()).getTime();
+      const thisWeek = getWeekNumber(new Date());
+      const groupId = els.groupSelect.value || null;
+      const subId = els.subGroupSelect.value || null;
+
+      let todayMin = 0;
+      let weekMin = 0;
+
+      for (const s of sessions) {
+        if (groupId && s.groupId !== groupId) continue;
+        if (subId && s.subGroupId !== subId) continue;
+        const when = new Date(s.completedAt);
+        if (startOfDay(when).getTime() === today) {
+          todayMin += s.minutes || 0;
+        }
+        if (getWeekNumber(when) === thisWeek) {
+          weekMin += s.minutes || 0;
+        }
+      }
+
+      els.timerSummary.textContent = `Today: ${todayMin} min • This week: ${weekMin} min`;
+
+      if (!groupId) {
+        els.timerGroupSummary.textContent = "No group selected";
+      } else {
+        const g = getGroupById(groupId);
+        const sg = subId ? getSubGroupById(subId) : null;
+        const color = colorSettings[groupId]?.groupColor || g.color;
+        els.timerGroupSummary.textContent = sg
+          ? `${g.name} → ${sg.name}`
+          : g.name;
+        els.timerGroupSummary.style.borderColor = color;
+        els.timerGroupSummary.style.color = color;
+      }
+    }
+
+    function setMode(newMode) {
+      timerMode = newMode;
+      if (timerMode === "focus") {
+        els.modeFocus.classList.add("active");
+        els.modeBreak.classList.remove("active");
+        remainingSeconds = parseInt(els.focusMinutesInput.value || "25", 10) * 60;
+      } else {
+        els.modeBreak.classList.add("active");
+        els.modeFocus.classList.remove("active");
+        remainingSeconds = parseInt(els.breakMinutesInput.value || "5", 10) * 60;
+      }
+      updateTimerDisplay();
+    }
+
+    function updateTimerDisplay() {
+      els.timerDisplay.textContent = formatTime(remainingSeconds);
+    }
+
+    function startTimer() {
+      if (timerInterval) return;
+      const durationMinutes =
+        timerMode === "focus"
+          ? parseInt(els.focusMinutesInput.value || "25", 10)
+          : parseInt(els.breakMinutesInput.value || "5", 10);
+      if (!durationMinutes || durationMinutes <= 0) return;
+      if (timerMode === "focus") {
+        // must have group & subgroup
+        if (!els.groupSelect.value || !els.subGroupSelect.value) {
+          alert("Please select group and sub-group before starting focus.");
+          return;
+        }
+      }
+
+      if (remainingSeconds <= 0) {
+        remainingSeconds = durationMinutes * 60;
+      }
+
+      timerInterval = setInterval(() => {
+        remainingSeconds -= 1;
+        if (remainingSeconds <= 0) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+          remainingSeconds = 0;
+          updateTimerDisplay();
+          onTimerFinished();
+        } else {
+          updateTimerDisplay();
+        }
+      }, 1000);
+    }
+
+    function resetTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      setMode(timerMode); // reset time for current mode
+    }
+
+    function onTimerFinished() {
+      if (timerMode === "focus") {
+        const groupId = els.groupSelect.value;
+        const subGroupId = els.subGroupSelect.value;
+        const durationMinutes = parseInt(els.focusMinutesInput.value || "25", 10);
+        const newSession = {
+          id: Date.now().toString(),
+          groupId,
+          subGroupId,
+          minutes: durationMinutes,
+          completedAt: new Date().toISOString()
+        };
+        sessions.push(newSession);
+        saveSessions();
+        renderQuickStats();
+        renderWeeklyTargets();
+        renderHistory();
+        updateTimerSummary();
+        syncSessionToCloud(newSession);
+        alert("Focus session completed and saved!");
+      } else {
+        alert("Break finished. Time to focus again!");
+      }
+      // reset
+      setMode(timerMode);
+    }
+
+    /*******************************************************
+     * Quick stats
+     ******************************************************/
+    function renderQuickStats() {
+      const container = els.quickStatsBody;
+      container.innerHTML = "";
+
+      if (!sessions.length) {
+        const div = document.createElement("div");
+        div.className = "helper-text";
+        div.style.textAlign = "left";
+        div.textContent = "No data yet. Complete a pomodoro to see stats.";
+        container.appendChild(div);
+        return;
+      }
+
+      const today = startOfDay(new Date()).getTime();
+      const days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+      const dailyTotals = Array(7).fill(0);
+
+      for (const s of sessions) {
+        const when = new Date(s.completedAt);
+        const dayStart = startOfDay(when).getTime();
+        if (today - dayStart > 6*24*60*60*1000) continue; // only last 7 days
+        dailyTotals[when.getDay()] += s.minutes || 0;
+      }
+
+      const max = Math.max(...dailyTotals, 1);
+      for (let i = 0; i < 7; i++) {
+        const row = document.createElement("div");
+        row.className = "stats-row";
+
+        const lbl = document.createElement("div");
+        lbl.className = "stats-label";
+        lbl.textContent = days[i];
+
+        const bar = document.createElement("div");
+        bar.className = "stats-bar";
+        const inner = document.createElement("div");
+        inner.className = "stats-bar-inner";
+        inner.style.width = `${(dailyTotals[i] / max) * 100}%`;
+        bar.appendChild(inner);
+
+        const val = document.createElement("div");
+        val.textContent = `${dailyTotals[i]} min`;
+
+        row.appendChild(lbl);
+        row.appendChild(bar);
+        row.appendChild(val);
+        container.appendChild(row);
+      }
+    }
+
+    /*******************************************************
+     * Weekly targets
+     ******************************************************/
+    function ensureDefaultTargets() {
+      // Only create default 0 entries if not present
+      for (const g of GROUPS) {
+        for (const sg of g.subGroups) {
+          if (!(sg.id in weeklyTargets)) {
+            weeklyTargets[sg.id] = 0;
+          }
+        }
+      }
+    }
+
+    function renderWeeklyTargets() {
+      ensureDefaultTargets();
+      els.weekRangeLabel.textContent = getCurrentWeekRangeLabel();
+      const list = els.targetsList;
+      list.innerHTML = "";
+
+      let anyTarget = false;
+      for (const g of GROUPS) {
+        for (const sg of g.subGroups) {
+          const targetMin = weeklyTargets[sg.id] || 0;
+          if (!targetMin) continue;
+          anyTarget = true;
+
+          // compute done this week
+          let done = 0;
+          const currentWeek = getWeekNumber(new Date());
+          for (const s of sessions) {
+            if (s.subGroupId !== sg.id) continue;
+            if (getWeekNumber(new Date(s.completedAt)) !== currentWeek) continue;
+            done += s.minutes || 0;
+          }
+
+          const row = document.createElement("div");
+          row.className = "target-row";
+
+          const title = document.createElement("div");
+          title.className = "target-title";
+          const nameSpan = document.createElement("span");
+          nameSpan.textContent = `${g.name} → ${sg.name}`;
+          const doneSpan = document.createElement("span");
+          doneSpan.textContent = `${done}/${targetMin} min`;
+          title.appendChild(nameSpan);
+          title.appendChild(doneSpan);
+
+          const bar = document.createElement("div");
+          bar.className = "target-bar";
+          const inner = document.createElement("div");
+          inner.className = "target-bar-inner";
+          inner.style.width = `${Math.min(100, (done / targetMin) * 100)}%`;
+          bar.appendChild(inner);
+
+          const meta = document.createElement("div");
+          meta.className = "target-meta";
+          const left = Math.max(0, targetMin - done);
+          meta.textContent = left > 0 ? `${left} min left` : "Target reached";
+
+          row.appendChild(title);
+          row.appendChild(bar);
+          row.appendChild(meta);
+          list.appendChild(row);
+        }
+      }
+
+      if (!anyTarget) {
+        const div = document.createElement("div");
+        div.className = "helper-text";
+        div.style.textAlign = "left";
+        div.textContent =
+          "No weekly targets set. Open Settings and add minutes for your sub-groups.";
+        list.appendChild(div);
+      }
+    }
+
+    /*******************************************************
+     * Settings rendering
+     ******************************************************/
+    function renderSettings() {
+      const container = els.settingsGroups;
+      container.innerHTML = "";
+
+      ensureDefaultTargets();
+
+      for (const g of GROUPS) {
+        const block = document.createElement("div");
+        block.className = "settings-group-block";
+
+        const header = document.createElement("div");
+        header.className = "settings-group-header";
+
+        const name = document.createElement("div");
+        name.textContent = g.name;
+
+        const colorInput = document.createElement("input");
+        colorInput.type = "color";
+        colorInput.value = colorSettings[g.id]?.groupColor || g.color;
+        colorInput.addEventListener("input", () => {
+          if (!colorSettings[g.id]) colorSettings[g.id] = {};
+          colorSettings[g.id].groupColor = colorInput.value;
+          saveColors();
+          updateTimerSummary();
+        });
+
+        const right = document.createElement("div");
+        right.style.display = "flex";
+        right.style.alignItems = "center";
+        right.style.gap = "4px";
+
+        const label = document.createElement("span");
+        label.style.fontSize = "11px";
+        label.style.color = "var(--muted)";
+        label.textContent = "Group color";
+
+        right.appendChild(label);
+        right.appendChild(colorInput);
+
+        header.appendChild(name);
+        header.appendChild(right);
+        block.appendChild(header);
+
+        for (const sg of g.subGroups) {
+          const row = document.createElement("div");
+          row.className = "settings-sub-row";
+
+          const left = document.createElement("div");
+          left.textContent = sg.name;
+
+          const rightSide = document.createElement("div");
+          rightSide.style.display = "flex";
+          rightSide.style.alignItems = "center";
+          rightSide.style.gap = "4px";
+
+          const targetInput = document.createElement("input");
+          targetInput.type = "number";
+          targetInput.min = "0";
+          targetInput.value = weeklyTargets[sg.id] || 0;
+          targetInput.addEventListener("change", () => {
+            weeklyTargets[sg.id] = parseInt(targetInput.value || "0", 10);
+            saveTargets();
+            renderWeeklyTargets();
+          });
+
+          const label2 = document.createElement("span");
+          label2.style.fontSize = "10px";
+          label2.style.color = "var(--muted)";
+          label2.textContent = "Weekly min";
+
+          rightSide.appendChild(targetInput);
+          rightSide.appendChild(label2);
+
+          row.appendChild(left);
+          row.appendChild(rightSide);
+          block.appendChild(row);
+        }
+
+        container.appendChild(block);
+      }
+    }
+
+    /*******************************************************
+     * History rendering
+     ******************************************************/
+    function renderHistory() {
+      const list = els.historyList;
+      list.innerHTML = "";
+
+      if (!sessions.length) {
+        const div = document.createElement("div");
+        div.className = "helper-text";
+        div.style.textAlign = "left";
+        div.textContent = "No sessions yet.";
+        list.appendChild(div);
+        return;
+      }
+
+      const groupFilter = els.historyGroupFilter.value || null;
+      const subFilter = els.historySubGroupFilter.value || null;
+      const fromStr = els.historyFrom.value;
+      const toStr = els.historyTo.value;
+
+      let fromDate = fromStr ? new Date(fromStr) : null;
+      let toDate = toStr ? new Date(toStr) : null;
+      if (toDate) {
+        toDate.setHours(23,59,59,999);
+      }
+
+      let label = "All time";
+      if (fromStr && toStr) label = `${fromStr} → ${toStr}`;
+      else if (fromStr) label = `From ${fromStr}`;
+      else if (toStr) label = `Up to ${toStr}`;
+      else {
+        // default: today
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = (today.getMonth()+1).toString().padStart(2,"0");
+        const dd = today.getDate().toString().padStart(2,"0");
+        const todayStr = `${yyyy}-${mm}-${dd}`;
+        els.historyFrom.value = todayStr;
+        els.historyTo.value = todayStr;
+        fromDate = startOfDay(today);
+        toDate = new Date(today);
+        toDate.setHours(23,59,59,999);
+        label = "Today";
+      }
+      els.historyRangeLabel.textContent = label;
+
+      // Filter & sort by time desc
+      const filtered = sessions
+        .filter(s => {
+          if (groupFilter && s.groupId !== groupFilter) return false;
+          if (subFilter && s.subGroupId !== subFilter) return false;
+          const when = new Date(s.completedAt);
+          if (fromDate && when < fromDate) return false;
+          if (toDate && when > toDate) return false;
+          return true;
+        })
+        .sort((a,b) => new Date(b.completedAt) - new Date(a.completedAt));
+
+      if (!filtered.length) {
+        const div = document.createElement("div");
+        div.className = "helper-text";
+        div.style.textAlign = "left";
+        div.textContent = "No sessions matching filters.";
+        list.appendChild(div);
+        return;
+      }
+
+      for (const s of filtered) {
+        const g = getGroupById(s.groupId);
+        const sg = getSubGroupById(s.subGroupId);
+        const when = new Date(s.completedAt);
+
+        const item = document.createElement("div");
+        item.className = "history-item";
+
+        const main = document.createElement("div");
+        main.className = "history-main";
+
+        const tag = document.createElement("div");
+        tag.className = "history-tag";
+        tag.textContent = `${g?.name || "?"} → ${sg?.name || "?"}`;
+
+        const meta = document.createElement("div");
+        meta.className = "history-meta";
+        meta.textContent = when.toLocaleString();
+
+        main.appendChild(tag);
+        main.appendChild(meta);
+
+        const min = document.createElement("div");
+        min.className = "history-min";
+        min.textContent = `${s.minutes} min`;
+
+        item.appendChild(main);
+        item.appendChild(min);
+        list.appendChild(item);
+      }
+    }
+
+    /*******************************************************
+     * Settings toggles
+     ******************************************************/
+    function initToggles() {
+      function togglePanel(panel) {
+        panel.classList.toggle("visible");
+      }
+
+      els.btnToggleSettings.addEventListener("click", () => {
+        togglePanel(els.settingsPanel);
+      });
+      els.btnToggleStats.addEventListener("click", () => {
+        els.quickStatsCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+      els.btnToggleHistory.addEventListener("click", () => {
+        togglePanel(els.historyPanelLeft);
+      });
+
+      els.btnShowStats.addEventListener("click", () => {
+        els.quickStatsCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+
+      els.btnShowHistory.addEventListener("click", () => {
+        els.historyPanelLeft.classList.add("visible");
+        els.historyPanelLeft.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+
+      els.btnThisWeek.addEventListener("click", () => {
+        renderWeeklyTargets();
+      });
+    }
+
+    /*******************************************************
+     * INIT
+     ******************************************************/
+    function init() {
+      grabElements();
+      loadFromStorage();
+      initSelects();
+      setMode("focus");
+      renderQuickStats();
+      renderWeeklyTargets();
+      renderSettings();
+      renderHistory();
+      updateTimerSummary();
+
+      els.btnStart.addEventListener("click", startTimer);
+      els.btnReset.addEventListener("click", resetTimer);
+      els.modeFocus.addEventListener("click", () => setMode("focus"));
+      els.modeBreak.addEventListener("click", () => setMode("break"));
+      els.focusMinutesInput.addEventListener("change", () => {
+        if (timerMode === "focus") setMode("focus");
+      });
+      els.breakMinutesInput.addEventListener("change", () => {
+        if (timerMode === "break") setMode("break");
+      });
+
+      initToggles();
+    }
+
+    document.addEventListener("DOMContentLoaded", init);
+  </script>
+</body>
+</html>
