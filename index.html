@@ -929,32 +929,39 @@
     }
 
     /*******************************************************
-     * CLOUD SYNC (Google Sheets)
-     ******************************************************/
-    async function syncSessionToCloud(session) {
-      if (!CLOUD_SYNC_URL || CLOUD_SYNC_URL === "PASTE_YOUR_GOOGLE_SCRIPT_URL_HERE") {
-        // user hasn't configured yet; just skip
-        return;
-      }
-      try {
-        const when = session.completedAt ? new Date(session.completedAt) : new Date();
-        const payload = {
-          group: getGroupById(session.groupId)?.name || "",
-          subGroup: getSubGroupById(session.subGroupId)?.name || "",
-          minutes: session.minutes || 0,
-          weekNumber: getWeekNumber(when)
-        };
+ * CLOUD SYNC (Google Sheets) – UPDATED
+ ******************************************************/
+async function syncSessionToCloud(session) {
+  if (!CLOUD_SYNC_URL ||
+      CLOUD_SYNC_URL === "PASTE_YOUR_GOOGLE_SCRIPT_WEB_APP_URL_HERE") {
+    // Skip if not yet configured
+    return;
+  }
 
-        await fetch(CLOUD_SYNC_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-        console.log("Cloud sync OK:", payload);
-      } catch (err) {
-        console.error("Cloud sync failed:", err);
-      }
-    }
+  try {
+    const when = session.completedAt ? new Date(session.completedAt) : new Date();
+
+    const payload = {
+      group: getGroupById(session.groupId)?.name || "",
+      subGroup: getSubGroupById(session.subGroupId)?.name || "",
+      minutes: session.minutes || 0,
+      completedAt: session.completedAt || new Date().toISOString(),
+      weekNumber: getWeekNumber(when)
+    };
+
+    // IMPORTANT — CORS-SAFE REQUEST
+    await fetch(CLOUD_SYNC_URL, {
+      method: "POST",
+      headers: { "Content-Type": "/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
+
+    console.log("Cloud sync OK:", payload);
+  } catch (err) {
+    console.error("Cloud sync failed:", err);
+  }
+}
+
 
     /*******************************************************
      * UI BINDING
