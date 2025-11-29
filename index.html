@@ -952,7 +952,7 @@ async function syncSessionToCloud(session) {
     // IMPORTANT — CORS-SAFE REQUEST
     await fetch(CLOUD_SYNC_URL, {
       method: "POST",
-      headers: { "Content-Type": "/plain;charset=utf-8" },
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload)
     });
 
@@ -1569,3 +1569,4 @@ async function syncSessionToCloud(session) {
   </script>
 </body>
 </html>
+
